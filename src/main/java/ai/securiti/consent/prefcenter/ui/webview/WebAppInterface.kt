@@ -9,13 +9,13 @@ import com.fasterxml.jackson.module.kotlin.readValue
 class WebAppInterface(private val webViewFragment: WebViewFragment) {
 
     @JavascriptInterface
-    fun onPurposeLoaded(consent: String) {
+    fun onPreferenceCenterLoaded(consent: String) {
         val mapper = Utils.mapper
         try {
             val consents: List<Consent> = mapper.readValue(consent)
 
             if (webViewFragment.getActivityListener() != null) {
-                webViewFragment.getActivityListener()?.onPurposeLoaded(consents)
+                webViewFragment.getActivityListener()?.onPreferenceCenterLoaded(consents)
             }
 
         } catch (e: Exception) {
@@ -24,12 +24,38 @@ class WebAppInterface(private val webViewFragment: WebViewFragment) {
     }
 
     @JavascriptInterface
-    fun onConsentsSubmitted(consent: String) {
+    fun onPreferenceCenterLoadFailed(err: String) {
+        val mapper = Utils.mapper
+        try {
+            if (webViewFragment.getActivityListener() != null) {
+                webViewFragment.getActivityListener()?.onPreferenceCenterLoadFailed(RuntimeException(err))
+            }
+
+        } catch (e: Exception) {
+            Log.e("WebAppInterface", e.stackTraceToString())
+        }
+    }
+
+    @JavascriptInterface
+    fun onConsentsSaved(consent: String) {
         val mapper = Utils.mapper
         try {
             val consents: List<Consent> = mapper.readValue(consent)
             if (webViewFragment.getActivityListener() != null) {
-                webViewFragment.getActivityListener()?.onConsentsSubmitted(consents)
+                webViewFragment.getActivityListener()?.onConsentsSaved(consents)
+            }
+        } catch (e: Exception) {
+            Log.e("WebAppInterface", e.stackTraceToString())
+        }
+    }
+
+    @JavascriptInterface
+    fun onConsentsSaveFailed(consent: String, err: String) {
+        val mapper = Utils.mapper
+        try {
+            val consents: List<Consent> = mapper.readValue(consent)
+            if (webViewFragment.getActivityListener() != null) {
+                webViewFragment.getActivityListener()?.onConsentsSaveFailed(consents, RuntimeException(err))
             }
         } catch (e: Exception) {
             Log.e("WebAppInterface", e.stackTraceToString())

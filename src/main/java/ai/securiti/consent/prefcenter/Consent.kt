@@ -1,9 +1,14 @@
 package ai.securiti.consent.prefcenter
 
-class Consent {
-    val processingPurposeId: Int = 0
-    val processingPurposeName: String = ""
-    val consentPurposeId: Int = 0
-    val consentPurposeName: String = ""
-    val granted: Boolean = false
+class Consent(
+    var processingPurposeId: Int = 0,
+    var processingPurposeName: String = "",
+    var consentPurposeId: Int = 0,
+    var consentPurposeName: String = "",
+    var granted: Boolean = false
+) {
+
+    fun getId(): String {
+        return "${processingPurposeId}-${consentPurposeId}"
+    }
 }

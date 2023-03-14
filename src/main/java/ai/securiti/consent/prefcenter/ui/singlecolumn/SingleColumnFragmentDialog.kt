@@ -1,10 +1,7 @@
 package ai.securiti.consent.prefcenter.ui.singlecolumn
 
 import ai.securiti.android.prefcenter.R
-import ai.securiti.consent.prefcenter.PreferenceCenter
-import ai.securiti.consent.prefcenter.PreferenceCenterSDK
-import ai.securiti.consent.prefcenter.ProcessingPurpose
-import ai.securiti.consent.prefcenter.Purpose
+import ai.securiti.consent.prefcenter.*
 import android.app.AlertDialog
 import android.app.Dialog
 import android.content.DialogInterface
@@ -19,9 +16,13 @@ import android.widget.*
 import androidx.fragment.app.DialogFragment
 
 
-class SingleColumnFragmentDialog(private val sdk: PreferenceCenterSDK, private val prefCenter: PreferenceCenter) :
+class SingleColumnFragmentDialog(
+    private val sdk: PreferenceCenterSDK,
+    private val prefCenter: PreferenceCenter,
+    private val listener: ConsentActivityListener?
+) :
     DialogFragment() {
-    private val consentStore = HashMap<String, Purpose>()
+    private val consentStore = HashMap<String, Consent>()
 
     override fun onCreateDialog(bundle: Bundle?): Dialog {
         Log.i("SingleColumnFragmentDialog", "Single column preference center started")
@@ -30,10 +31,10 @@ class SingleColumnFragmentDialog(private val sdk: PreferenceCenterSDK, private v
         val metadata = prefCenter.getMetaData()
         builder.setTitle(Html.fromHtml(metadata.prefCenterHeader, Html.FROM_HTML_MODE_LEGACY))
 
-        val saveListener = SingleColumnFragmentDialogSaveListener(sdk, prefCenter, consentStore)
+        val saveListener = SingleColumnFragmentDialogSaveListener(sdk, prefCenter, consentStore, listener)
         builder.setPositiveButton(metadata.buttonText, saveListener)
 
-        val cancelListener = SingleColumnFragmentDialogCancelListener(sdk, prefCenter)
+        val cancelListener = SingleColumnFragmentDialogCancelListener(sdk, prefCenter, listener)
         builder.setNegativeButton(R.string.securiti_lbl_cancel, cancelListener)
 
         builder.setView(buildView())
@@ -103,7 +104,13 @@ class SingleColumnFragmentDialog(private val sdk: PreferenceCenterSDK, private v
                 }
                 if (item.consentPurposes != null) {
                     for (consent in item.consentPurposes!!) {
-                        val record = Purpose(item, consent, false)
+                        val record = Consent(
+                            item.id,
+                            item.name,
+                            consent.id,
+                            consent.name,
+                            false
+                        )
                         consentStore[record.getId()] = record
                         val chkBox = buildConsentItemView(record)
                         linearLayout.addView(chkBox)
@@ -127,7 +134,7 @@ class SingleColumnFragmentDialog(private val sdk: PreferenceCenterSDK, private v
         return tmpTxt
     }
 
-    private fun buildConsentItemView(consent: Purpose): CheckBox {
+    private fun buildConsentItemView(consent: Consent): CheckBox {
         val tmpCheck = CheckBox(sdk.appCtx)
         val tmpTxtParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -135,11 +142,11 @@ class SingleColumnFragmentDialog(private val sdk: PreferenceCenterSDK, private v
         )
         tmpCheck.setPadding(20, 0, 5, 5)
         tmpCheck.isChecked = consent.granted
-        tmpCheck.text = Html.fromHtml(consent.consent.name, Html.FROM_HTML_MODE_LEGACY)
+        tmpCheck.text = Html.fromHtml(consent.consentPurposeName, Html.FROM_HTML_MODE_LEGACY)
         tmpCheck.layoutParams = tmpTxtParams
 
         tmpCheck.setOnCheckedChangeListener { _, isChecked ->
-            val msg = "You have ${consent.consent.name} is " + (if (isChecked) "checked" else "unchecked") + "."
+            val msg = "You have ${consent.consentPurposeName} is " + (if (isChecked) "checked" else "unchecked") + "."
             Log.i("SingleColumnFragmentDialog", msg)
             consent.granted = isChecked
         }
@@ -161,20 +168,30 @@ class SingleColumnFragmentDialog(private val sdk: PreferenceCenterSDK, private v
 private class SingleColumnFragmentDialogSaveListener(
     val sdk: PreferenceCenterSDK,
     val prefCenter: PreferenceCenter,
-    val consentStore: HashMap<String, Purpose>
+    val consentStore: HashMap<String, Consent>,
+    val listener: ConsentActivityListener?
 ) :
     DialogInterface.OnClickListener {
     override fun onClick(dialog: DialogInterface?, id: Int) {
         //Toast.makeText(sdk.appCtx, "Save Clicked", Toast.LENGTH_SHORT).show()
-        sdk.saveConsent(ArrayList(consentStore.values))
+        sdk.saveConsent(ArrayList(consentStore.values), listener)
         dialog?.dismiss()
     }
 }
 
-private class SingleColumnFragmentDialogCancelListener(val sdk: PreferenceCenterSDK, val prefCenter: PreferenceCenter) :
+private class SingleColumnFragmentDialogCancelListener(
+    val sdk: PreferenceCenterSDK,
+    val prefCenter: PreferenceCenter,
+    val listener: ConsentActivityListener?
+) :
     DialogInterface.OnClickListener {
     override fun onClick(dialog: DialogInterface?, id: Int) {
         Toast.makeText(sdk.appCtx, "Cancel Clicked", Toast.LENGTH_SHORT).show()
         dialog?.dismiss()
+        try {
+            listener?.onConsentsCancelled()
+        } catch (e: Exception) {
+            Log.i("SingleColumnFragmentDialogSaveListener", e.stackTraceToString())
+        }
     }
 }

@@ -94,7 +94,8 @@ class PreferenceCenterSDK(private val conf: Configuration, val appCtx: Context) 
      */
     fun showPreferenceCenter(
         activity: Any? = null,
-        uiStyle: Int = 0
+        uiStyle: Int = 0,
+        listener: ConsentActivityListener? = null
     ): Int {
         if (activity !is FragmentManager) {
             val msg = "Could not understand Activity " + activity?.javaClass.toString()
@@ -104,7 +105,7 @@ class PreferenceCenterSDK(private val conf: Configuration, val appCtx: Context) 
         }
 
         if (activity is FragmentManager && uiStyle == UI_WEB_VIEW) {
-            renderFragmentManagerWebView(activity)
+            renderWebViewFragment(activity, listener)
             return 0
         }
 
@@ -114,7 +115,7 @@ class PreferenceCenterSDK(private val conf: Configuration, val appCtx: Context) 
                 if (activity is FragmentManager) {
                     when (uiStyle) {
                         UI_SINGLE_COLUMN -> {
-                            self.renderFragmentManager(activity, prefCenter!!, uiStyle)
+                            self.renderSingleColumnDialog(activity, prefCenter!!, listener)
                         }
 
                         else -> {
@@ -158,8 +159,8 @@ class PreferenceCenterSDK(private val conf: Configuration, val appCtx: Context) 
         return 0
     }
 
-    private fun renderFragmentManagerWebView(activity: FragmentManager): Int {
-        val webView = WebViewFragment(conf, appCtx, null)
+    private fun renderWebViewFragment(activity: FragmentManager, listener: ConsentActivityListener?): Int {
+        val webView = WebViewFragment(conf, appCtx, listener)
         val parent = getVisibleFragment(activity)
         val parentId: Int = parent?.id ?: 0
 
@@ -168,8 +169,12 @@ class PreferenceCenterSDK(private val conf: Configuration, val appCtx: Context) 
         return 0
     }
 
-    private fun renderFragmentManager(activity: FragmentManager, prefCenter: PreferenceCenter, uiStyle: Int): Int {
-        SingleColumnFragmentDialog(this, prefCenter).show(activity, FragmentManagerId)
+    private fun renderSingleColumnDialog(
+        activity: FragmentManager,
+        prefCenter: PreferenceCenter,
+        listener: ConsentActivityListener?
+    ): Int {
+        SingleColumnFragmentDialog(this, prefCenter, listener).show(activity, FragmentManagerId)
         return 0
     }
 
@@ -182,21 +187,21 @@ class PreferenceCenterSDK(private val conf: Configuration, val appCtx: Context) 
         return null
     }
 
-    fun saveConsent(consents: List<Purpose>): Int {
+    fun saveConsent(consents: List<Consent>, listener: ConsentActivityListener?): Int {
         val payload = ConsentPayload()
         val consentInfo = HashMap<Int, ConsentPayloadConsentInfo>()
 
         for (consent in consents) {
-            if (!consentInfo.containsKey(consent.processing.id)) {
-                consentInfo[consent.processing.id] = ConsentPayloadConsentInfo()
+            if (!consentInfo.containsKey(consent.processingPurposeId)) {
+                consentInfo[consent.processingPurposeId] = ConsentPayloadConsentInfo()
             }
 
             val item = ConsentPayloadConsentItem()
-            item.consentPurposeId = consent.consent.id
+            item.consentPurposeId = consent.consentPurposeId
             item.granted = consent.granted
 
-            consentInfo[consent.processing.id]?.processingPurposeId = consent.processing.id
-            consentInfo[consent.processing.id]?.consentedItems?.add(item)
+            consentInfo[consent.processingPurposeId]?.processingPurposeId = consent.processingPurposeId
+            consentInfo[consent.processingPurposeId]?.consentedItems?.add(item)
         }
 
         if (consentInfo.size == 0) {
@@ -234,6 +239,11 @@ class PreferenceCenterSDK(private val conf: Configuration, val appCtx: Context) 
 
         val callback = object : Callback {
             override fun onFailure(call: Call, e: IOException) {
+                try {
+                    listener?.onConsentsSaveFailed(consents, e)
+                } catch (e: Exception) {
+                    Log.i("SingleColumnFragmentDialogSaveListener", e.stackTraceToString())
+                }
                 Log.e(TAG, e.stackTraceToString())
             }
 
@@ -243,7 +253,17 @@ class PreferenceCenterSDK(private val conf: Configuration, val appCtx: Context) 
                         val body = response.body!!.string()
                         println(body)
                         Log.e(TAG, "Unexpected http response $response")
+                        try {
+                            listener?.onConsentsSaveFailed(consents, RuntimeException("Unexpected http response $response"))
+                        } catch (e: Exception) {
+                            Log.i("SingleColumnFragmentDialogSaveListener", e.stackTraceToString())
+                        }
                         return
+                    }
+                    try {
+                        listener?.onConsentsSaved(consents)
+                    } catch (e: Exception) {
+                        Log.i("SingleColumnFragmentDialogSaveListener", e.stackTraceToString())
                     }
                     val body = response.body!!.string()
                     println(body)
