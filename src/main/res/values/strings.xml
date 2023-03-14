@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="securiti_name">Securiti</string>
+    <string name="securiti_company">Securiti</string>
+    <string name="securiti_fetching_pref_center">Loading Preference Center…</string>
+    <string name="securiti_saving_consents">Saving consents…</string>
+    <string name="securiti_saving_consents_failed">Failed to record consents</string>
+    <string name="securiti_saving_consents_success">Consents record was successful</string>
+    <string name="securiti_lbl_save">Save</string>
+    <string name="securiti_lbl_cancel">Cancel</string>
+</resources>
