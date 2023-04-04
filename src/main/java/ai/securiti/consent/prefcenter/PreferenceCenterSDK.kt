@@ -29,6 +29,11 @@ class PreferenceCenterSDK(private val conf: Configuration, val appCtx: Context) 
     private val TAG = "PreferenceCenterSDK"
     private val FragmentManagerId = "PreferenceCenterFragmentManager"
     private var prefCenter: PreferenceCenter? = null
+    private val storage = PreferenceStore(conf, appCtx)
+
+    public fun getStorage(): PreferenceStore {
+        return storage
+    }
 
     private fun newRequest(): Request.Builder {
         return Request.Builder()
@@ -121,16 +126,31 @@ class PreferenceCenterSDK(private val conf: Configuration, val appCtx: Context) 
                         else -> {
                             val msg = "Could not understand UI Style $uiStyle"
                             Log.e(TAG, msg)
+                            try {
+                                listener?.onPreferenceCenterLoadFailed(RuntimeException(msg))
+                            } catch (e: Exception) {
+                                Log.i(TAG, e.stackTraceToString())
+                            }
                         }
                     }
                 } else {
                     val msg = "Could not understand Activity " + activity.javaClass.toString()
                     Log.e(TAG, msg)
+                    try {
+                        listener?.onPreferenceCenterLoadFailed(RuntimeException(msg))
+                    } catch (e: Exception) {
+                        Log.i(TAG, e.stackTraceToString())
+                    }
                 }
             }
 
             override fun onFailure(call: Call, e: IOException) {
                 Log.e(TAG, e.stackTraceToString())
+                try {
+                    listener?.onPreferenceCenterLoadFailed(e)
+                } catch (e: Exception) {
+                    Log.i(TAG, e.stackTraceToString())
+                }
             }
 
             override fun onResponse(call: Call, response: Response) {
@@ -254,11 +274,19 @@ class PreferenceCenterSDK(private val conf: Configuration, val appCtx: Context) 
                         println(body)
                         Log.e(TAG, "Unexpected http response $response")
                         try {
-                            listener?.onConsentsSaveFailed(consents, RuntimeException("Unexpected http response $response"))
+                            listener?.onConsentsSaveFailed(
+                                consents,
+                                RuntimeException("Unexpected http response $response")
+                            )
                         } catch (e: Exception) {
                             Log.i("SingleColumnFragmentDialogSaveListener", e.stackTraceToString())
                         }
                         return
+                    }
+                    try {
+                        storage.putConsents(consents)
+                    } catch (e: Exception) {
+                        Log.i("SingleColumnFragmentDialogSaveListener", e.stackTraceToString())
                     }
                     try {
                         listener?.onConsentsSaved(consents)

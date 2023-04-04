@@ -111,6 +111,7 @@ class SingleColumnFragmentDialog(
                             consent.name,
                             false
                         )
+                        record.granted = sdk.getStorage().purposeGranted(record)
                         consentStore[record.getId()] = record
                         val chkBox = buildConsentItemView(record)
                         linearLayout.addView(chkBox)
@@ -118,8 +119,14 @@ class SingleColumnFragmentDialog(
                 }
             }
         }
-
         layout.addView(linearLayout)
+
+        try {
+            listener?.onPreferenceCenterLoaded(ArrayList(consentStore.values))
+        } catch (e: Exception) {
+            Log.i("SingleColumnFragmentDialogSaveListener", e.stackTraceToString())
+        }
+
         return layout
     }
 
