@@ -9,10 +9,12 @@ import android.graphics.Color
 import android.os.Bundle
 import android.text.Html
 import android.util.Log
+import android.view.Gravity
 import android.view.View
 import android.view.Window
 import android.view.WindowManager.LayoutParams
 import android.widget.*
+import androidx.appcompat.widget.SwitchCompat
 import androidx.fragment.app.DialogFragment
 
 
@@ -134,23 +136,44 @@ class SingleColumnFragmentDialog(
         val tmpTxt = TextView(sdk.appCtx)
         val tmpTxtParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            1.0f
         )
         tmpTxt.text = Html.fromHtml(text, Html.FROM_HTML_MODE_LEGACY)
         tmpTxt.layoutParams = tmpTxtParams
         return tmpTxt
     }
 
-    private fun buildConsentItemView(consent: Consent): CheckBox {
-        val tmpCheck = CheckBox(sdk.appCtx)
+    private fun buildConsentItemView(consent: Consent): LinearLayout {
+        val linearLayout = LinearLayout(sdk.appCtx)
+        val linearParams = RelativeLayout.LayoutParams(
+            RelativeLayout.LayoutParams.MATCH_PARENT,
+            RelativeLayout.LayoutParams.MATCH_PARENT
+        )
+        linearLayout.setPadding(5, 5, 5, 0)
+        linearLayout.orientation = LinearLayout.HORIZONTAL;
+        linearLayout.layoutParams = linearParams
+        val chkBox = buildConsentCheckbox(consent)
+        val txtView = buildTextView(consent.consentPurposeName)
+
+        linearLayout.addView(txtView, -1)
+        linearLayout.addView(chkBox, -1)
+
+        return linearLayout
+    }
+
+    private fun buildConsentCheckbox(consent: Consent): SwitchCompat {
+        val tmpCheck = SwitchCompat(sdk.appCtx)
         val tmpTxtParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.WRAP_CONTENT,
             LinearLayout.LayoutParams.WRAP_CONTENT
         )
-        tmpCheck.setPadding(20, 0, 5, 5)
+        tmpCheck.setPadding(5, 0, 0, 0)
         tmpCheck.isChecked = consent.granted
-        tmpCheck.text = Html.fromHtml(consent.consentPurposeName, Html.FROM_HTML_MODE_LEGACY)
+        //tmpCheck.text = Html.fromHtml(consent.consentPurposeName, Html.FROM_HTML_MODE_LEGACY)
         tmpCheck.layoutParams = tmpTxtParams
+        tmpCheck.gravity = Gravity.RIGHT
+        tmpCheck.switchMinWidth = 150
 
         tmpCheck.setOnCheckedChangeListener { _, isChecked ->
             val msg = "You have ${consent.consentPurposeName} is " + (if (isChecked) "checked" else "unchecked") + "."

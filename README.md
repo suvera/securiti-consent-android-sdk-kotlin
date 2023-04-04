@@ -36,8 +36,8 @@ On a button click or menu item click, add code like below.
 ```kotlin
 binding.btnShowPrefCenter.setOnClickListener {
     val conf = Configuration(
-        prefCenterId = "a3196671-ca93-46f2-9ed8-7690f2cebbe5",
-        prefCenterToken = "qa~b2bc21e0-0db5-4947-8208-a05436ccea72"
+        prefCenterId = "--id-here",
+        prefCenterToken = "-token-here"
     )
     val sdk = PreferenceCenterSDK(conf, context as Context)
     
